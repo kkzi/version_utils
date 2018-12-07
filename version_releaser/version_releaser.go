@@ -181,7 +181,7 @@ func generateInnoProfile(app App) string {
 	//	programs = append(programs, generateFileText(p))
 	//}
 
-	programsDir := `Source: "` + app.WorkPath + `"/*; DestDir: "{app}/"; Flags: ignoreversion recursesubdirs createallsubdirs`
+	programsDir := `Source: "` + app.WorkPath + `/*"; DestDir: "{app}/"; Flags: ignoreversion recursesubdirs createallsubdirs`
 
 
 	profile := innoProfileTemplate
