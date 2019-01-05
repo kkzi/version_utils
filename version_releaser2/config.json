@@ -1,0 +1,34 @@
+{
+  "version":"2.1.5",
+  "version_server": "http://127.0.0.1:9999/check_version/",
+  "compiler": "D:/Program Files/Inno Setup 5/ISCC.exe",
+  "output": "D:/code/AtsClient/tools/version_server/files",
+  "publisher":"AtomData, Inc.",
+  "url":"http://www.atomdatatech.com/",
+  "apps": [
+    {
+      "app_id":"{{44095B79-5853-4782-866F-B9BBAF6DE96E}}",
+      "app_name":"AtsClient",
+      "app_exe":"AtsClient.exe",
+      "debug_path" : "d:/code/AtsClient/Build/x64/Debug/",
+      "work_path": "d:/project/ATS/release/AtsClient/",
+      "base_path": "",
+      "config_path": "D:/code/AtsClient/Config",
+      "setup_target_path":"d:/cdyz/AtsClient"
+    },
+    {
+      "app_id":"{{5C19D93C-986C-49DE-8729-A5177E855361}",
+      "app_name":"AtsServer",
+      "app_exe":"ats_serverd.exe",
+      "debug_path" : "D:/code/ats_server/build/x64/Debug",
+      "work_path": "D:/project/ATS/release/ats_server",
+      "base_path": "",
+      "config_path": "D:/code/ats_server/config",
+      "setup_target_path":"d:/cdyz/AtsServer",
+      "extern_path": [{
+          "source": "D:/project/ATS/release/local/*",
+          "target": "d:/"
+      }]
+    }
+  ]
+}
