@@ -92,8 +92,8 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 var config = Config{}
 
-func loadConfig() {
-	text, err := ioutil.ReadFile("./config.json")
+func loadConfig(cfg string) {
+	text, err := ioutil.ReadFile(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -230,7 +230,12 @@ func generateFileText(src string) string {
 
 func main() {
 	log.Println(os.Args)
-	loadConfig()
+
+	cfg := "config.json"
+	if len(os.Args) > 1 {
+		cfg = os.Args[1]
+	}
+	loadConfig(cfg)
 
 	var iss []string
 	for _, app := range config.Apps {

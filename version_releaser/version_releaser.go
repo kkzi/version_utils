@@ -92,8 +92,8 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 var config = Config{}
 
-func loadConfig() {
-	text, err := ioutil.ReadFile("./config.json")
+func loadConfig(cfg string) {
+	text, err := ioutil.ReadFile(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func createVersionConfig(app App) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ioutil.WriteFile(filepath.Join(app.WorkPath, "version.json"), output, os.ModePerm)
+	_ = ioutil.WriteFile(filepath.Join(app.WorkPath, "version.json"), output, os.ModePerm)
 	log.Println("create version.json. ", string(output))
 }
 
@@ -129,7 +129,7 @@ func copyFile(from, to string) {
 func copyNewFiles(app App) {
 	log.Println("copy new files from ", app.DebugPath, " to ", app.WorkPath)
 
-	filepath.Walk(app.DebugPath, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(app.DebugPath, func(path string, info os.FileInfo, err error) error {
 		relativePath := strings.Replace(filepath.ToSlash(path), filepath.ToSlash(app.DebugPath), "", -1)
 		dest := filepath.Join(app.WorkPath, relativePath)
 		if strings.HasSuffix(path, ".dll") || strings.HasSuffix(path, ".exe") {
@@ -227,7 +227,12 @@ func generateFileText(src string) string {
 
 func main() {
 	log.Println(os.Args)
-	loadConfig()
+
+	cfg := "config.json"
+	if len(os.Args) > 1 {
+		cfg = os.Args[1]
+	}
+	loadConfig(cfg)
 
 	var iss []string
 	for _, app := range config.Apps {
