@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,8 +27,6 @@ type App struct {
 	ExeName     string       `json:"app_exe"`
 	DebugPath   string       `json:"debug_path"`
 	WorkPath    string       `json:"work_path"`
-	BasePath    string       `json:"base_path"`
-	ConfigPath  string       `json:"config_path"`
 	SetupTarget string       `json:"setup_target_path"`
 	Externs     []ExternPath `json:"extern_path"`
 }
@@ -48,16 +47,16 @@ $DEFINES$
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId=$APPID$
-AppName={#MyAppName}
-AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
-AppPublisher={#MyAppPublisher}
-AppPublisherURL={#MyAppURL}
-AppSupportURL={#MyAppURL}
-AppUpdatesURL={#MyAppURL}
+AppName={#AppName}
+AppVersion={#AppVersion}
+;AppVerName={#AppName} {#AppVersion}
+AppPublisher={#AppPublisher}
+AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}
+AppUpdatesURL={#AppURL}
 DefaultDirName=$SETUP_TARGET$
-DefaultGroupName={#MyAppName}
-OutputBaseFilename={#MyAppName}_{#MyAppVersion}
+DefaultGroupName={#AppName}
+OutputBaseFilename={#AppName}_{#AppVersion}
 Compression=lzma
 SolidCompression=yes
 
@@ -68,26 +67,40 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Base Files
-$BASE_FILES$
-
-; Config Files
-$CONFIG_FILES$
+; Program Files
+$PROGRAM_FILES$
 
 ; Extern Files
 $EXTERN_FILES$
 
-; Program Files
-$PROGRAM_FILES$
-
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
+; can not replace \ to /
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
+Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}/{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}/vcredist_x64.exe"; Parameters: /q; WorkingDir: {tmp}; Flags: skipifdoesntexist; StatusMsg: "Installing Microsoft Visual C++ Runtime ..."; Check: NeedInstallVCRuntime
+
+; copy a vcredist_x64.exe to install path first
+[Code]
+var NeedVcRuntime: Boolean;
+ 
+function NeedInstallVCRuntime(): Boolean;
+begin
+  Result := NeedVcRuntime;
+end;
+ 
+function InitializeSetup(): Boolean;
+var version: Cardinal;
+begin
+  if RegQueryDWordValue(HKLM, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{0D3E9E15-DE7A-300B-96F1-B4AF12B96488}', 'Version', version) = false then begin
+    NeedVcRuntime := true;
+  end;
+  Result := true;
+end;
 `
 
 var config = Config{}
@@ -142,57 +155,37 @@ func copyNewFiles(app App) {
 }
 
 func generateInnoProfile(app App) string {
-	isDemo := len(os.Args) > 1 && os.Args[1] == "demo"
-	if isDemo {
-		app.Name = app.Name + "Demo"
+	var defines, programs, externs /*, programs*/ []string
+	defines = append(defines, `#define AppName "`+app.Name+`"`)
+	defines = append(defines, `#define AppVersion "`+config.Version+`"`)
+	defines = append(defines, `#define AppPublisher "`+config.Publisher+`"`)
+	defines = append(defines, `#define AppURL "`+config.Url+`"`)
+	defines = append(defines, `#define AppExeName "`+app.ExeName+`"`)
+	defines = append(defines, `#define AppSourceDir "`+app.WorkPath+`"`)
+
+	if app.WorkPath != "" {
+		flags := "ignoreversion recursesubdirs createallsubdirs"
+		text := fmt.Sprintf(`Source: "{#AppSourceDir}/*"; Excludes: "\config"; DestDir: "{app}/"; Flags: %s`, flags)
+		programs = append(programs, text)
 	}
 
-	var defines, configs, bases, externs /*, programs*/ []string
-	defines = append(defines, `#define MyAppName "`+app.Name+`"`)
-	defines = append(defines, `#define MyAppVersion "`+config.Version+`"`)
-	defines = append(defines, `#define MyAppPublisher "`+config.Publisher+`"`)
-	defines = append(defines, `#define MyAppURL "`+config.Url+`"`)
-	defines = append(defines, `#define MyAppExeName "`+app.ExeName+`"`)
-
-	if app.ConfigPath != "" && isDemo {
-		configs = append(configs, generateDirText(app.ConfigPath))
-	}
-	if app.BasePath != "" {
-		bases = append(bases, generateDirText(app.BasePath))
+	fileInfo, _ := os.Stat(app.WorkPath + "/config")
+	if fileInfo.IsDir() {
+		flags := "ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall"
+		cfg := fmt.Sprintf(`Source: "{#AppSourceDir}/config/*"; DestDir: "{app}/config/"; Flags: %s`, flags)
+		programs = append(programs, cfg)
 	}
 
 	for _, e := range app.Externs {
 		externs = append(externs, `Source: "`+e.Source+`"; DestDir: "`+e.Target+`"; Flags: ignoreversion`)
 	}
 
-	//files, _ := ioutil.ReadDir(app.WorkPath)
-	//temps := []string{}
-	//for _, p := range files {
-	//	path, _ := filepath.Abs(filepath.Join(app.WorkPath, p.Name()))
-	//	if p.IsDir() {
-	//		if strings.ToLower(p.Name()) != "config" {
-	//			programs = append(programs, generateDirText(path))
-	//		}
-	//	} else {
-	//		temps = append(temps, path)
-	//	}
-	//}
-	//for _, p := range temps {
-	//	programs = append(programs, generateFileText(p))
-	//}
-
-	programsDir := `Source: "` + app.WorkPath + `/*"; DestDir: "{app}/"; Flags: ignoreversion recursesubdirs createallsubdirs`
-
-
 	profile := innoProfileTemplate
 	profile = strings.Replace(profile, "$DEFINES$", strings.Join(defines, "\n"), -1)
 	profile = strings.Replace(profile, "$APPID$", app.Id, -1)
 	profile = strings.Replace(profile, "$SETUP_TARGET$", app.SetupTarget, -1)
-	profile = strings.Replace(profile, "$BASE_FILES$", strings.Join(bases, "\n"), -1)
+	profile = strings.Replace(profile, "$PROGRAM_FILES$", strings.Join(programs, "\n"), -1)
 	profile = strings.Replace(profile, "$EXTERN_FILES$", strings.Join(externs, "\n"), -1)
-	profile = strings.Replace(profile, "$CONFIG_FILES$", strings.Join(configs, "\n"), -1)
-	profile = strings.Replace(profile, "$PROGRAM_FILES$", programsDir, -1)
-
 
 	iss := filepath.Join(config.Output, app.Name+"_"+config.Version+".iss")
 	log.Println("create iss file: ", iss)
@@ -214,17 +207,6 @@ func generateSetupFile(iss string) {
 	log.Println("create setup file ok")
 }
 
-func generateDirText(src string) string {
-	flags := `Flags: ignoreversion recursesubdirs createallsubdirs`
-	dir := filepath.Base(src)
-	return `Source: "` + src + `/*"; DestDir: "{app}/` + dir + `"; ` + flags
-}
-
-func generateFileText(src string) string {
-	flags := `Flags: ignoreversion`
-	return `Source: "` + src + `"; DestDir: "{app}"; ` + flags
-}
-
 func main() {
 	log.Println(os.Args)
 
@@ -244,4 +226,3 @@ func main() {
 		generateSetupFile(i)
 	}
 }
-
