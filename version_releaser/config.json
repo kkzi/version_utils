@@ -1,34 +1,37 @@
 {
-  "version":"2.1.5",
-  "version_server": "http://127.0.0.1:9999/check_version/",
-  "compiler": "D:/Program Files/Inno Setup 5/ISCC.exe",
-  "output": "D:/code/AutoTestSystem/tools/version_server/files",
-  "publisher":"AtomData, Inc.",
+  "version":"2.12.6",
+  "compiler": "c:/Program Files (x86)/Inno Setup 6/ISCC.exe",
+  "output": "C:/dev/code/_release/output",
+  "publisher":"AtomDataTech, Inc.",
   "url":"http://www.atomdatatech.com/",
   "apps": [
     {
       "app_id":"{{44095B79-5853-4782-866F-B9BBAF6DE96E}}",
-      "app_name":"AutoTestSystem",
+      "app_name":"AtsClient",
       "app_exe":"AtsClient.exe",
-      "debug_path" : "d:/code/AutoTestSystem/Build/x64/Debug/",
-      "work_path": "d:/project/ATS/release/AutoTestSystem/",
-      "base_path": "",
-      "config_path": "D:/code/AutoTestSystem/Config",
-      "setup_target_path":"d:/cdyz/AutoTestSystem"
+      "debug_path" : "C:/dev/code/AtsClient/Build/x64/Release",
+      "work_path": "C:/dev/code/_release/AtsClient",
+      "setup_target_path":"C:/Program Files/Atom/AtsClient",
+      "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
+      "extern_path":[
+          {"source":"C:/dev/code/AtsClient/Config/*","target":"{app}/Config", "override": false},
+          {"source":"C:/dev/code/AtsClient/Customized/*","target":"{app}/Customized", "override": false},
+          {"source":"C:/dev/code/AtsClient/Src/TestUnitExcelDriver/*.py","target":"{app}/TestUnitExcelDriver", "override": false},
+          {"source":"C:/dev/code/AtsClient/Build/x64/Release/AtsForPython.pyd","target":"{app}/", "override": true}
+      ]
     },
     {
-      "app_id":"{{5C19D93C-986C-49DE-8729-A5177E855361}",
+      "app_id":"{{5C19D93C-986C-49DE-8729-A5177E855361}}",
       "app_name":"AtsServer",
-      "app_exe":"ats_serverd.exe",
-      "debug_path" : "D:/code/ats_server/build/x64/Debug",
-      "work_path": "D:/project/ATS/release/ats_server",
-      "base_path": "",
-      "config_path": "D:/code/ats_server/config",
-      "setup_target_path":"d:/cdyz/AtsServer",
-      "extern_path": [{
-          "source": "D:/project/ATS/release/local/*",
-          "target": "d:/"
-      }]
+      "app_exe":"ats_server.exe",
+      "debug_path" : "C:/dev/code/AtsServer/build/x64/Release",
+      "work_path": "C:/dev/code/_release/AtsServer",
+      "setup_target_path":"C:/Program Files/Atom/AtsServer",
+      "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
+      "extern_path":[
+          {"source":"C:/dev/code/AtsServer/config/*","target":"{app}/config", "override": false},
+          {"source":"C:/dev/code/AtsServer/sql/*","target":"{app}/sql","override": true}
+      ]
     }
   ]
 }

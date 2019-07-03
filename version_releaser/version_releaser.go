@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -28,12 +29,14 @@ type App struct {
 	DebugPath   string       `json:"debug_path"`
 	WorkPath    string       `json:"work_path"`
 	SetupTarget string       `json:"setup_target_path"`
+	VcRedist    string       `json:"vcredist"`
 	Externs     []ExternPath `json:"extern_path"`
 }
 
 type ExternPath struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
+	Source   string `json:"source"`
+	Target   string `json:"target"`
+	Override bool   `json:"override"`
 }
 
 var innoProfileTemplate = `
@@ -55,16 +58,17 @@ AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}
 AppUpdatesURL={#AppURL}
 DefaultDirName=$SETUP_TARGET$
-DefaultGroupName={#AppName}
+DefaultGroupName=Atom
 OutputBaseFilename={#AppName}_{#AppVersion}
 Compression=lzma
 SolidCompression=yes
+PrivilegesRequired=admin
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 ; Program Files
@@ -81,26 +85,12 @@ Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}/{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-Filename: "{app}/vcredist_x64.exe"; Parameters: /q; WorkingDir: {tmp}; Flags: skipifdoesntexist; StatusMsg: "Installing Microsoft Visual C++ Runtime ..."; Check: NeedInstallVCRuntime
+Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+$RUN$
 
 ; copy a vcredist_x64.exe to install path first
 [Code]
-var NeedVcRuntime: Boolean;
- 
-function NeedInstallVCRuntime(): Boolean;
-begin
-  Result := NeedVcRuntime;
-end;
- 
-function InitializeSetup(): Boolean;
-var version: Cardinal;
-begin
-  if RegQueryDWordValue(HKLM, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{0D3E9E15-DE7A-300B-96F1-B4AF12B96488}', 'Version', version) = false then begin
-    NeedVcRuntime := true;
-  end;
-  Result := true;
-end;
+$CODE$
 `
 
 var config = Config{}
@@ -121,35 +111,59 @@ func loadConfig(cfg string) {
 }
 
 func createVersionConfig(app App) {
-	version := map[string]string{"current_version": config.Version, "remote": config.VersionServer + app.Name}
-	output, err := json.Marshal(version)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = ioutil.WriteFile(filepath.Join(app.WorkPath, "version.json"), output, os.ModePerm)
-	log.Println("create version.json. ", string(output))
+	version := config.Version
+	_ = ioutil.WriteFile(filepath.Join(app.WorkPath, "version"), []byte(version), os.ModePerm)
+	log.Println("create version file: ", string(version))
 }
 
 func copyFile(from, to string) {
 	from = filepath.FromSlash(from)
 	to = filepath.FromSlash(to)
-	cmd := exec.Command("xcopy", "/y", "/f", from, to)
-	if err := cmd.Run(); err != nil {
-		log.Println("copy file failed: ", err, "[xcopy /y /f "+from+" "+to+"]")
+	src, _ := os.Open(from)
+	defer src.Close()
+
+	dstdir := filepath.Dir(to)
+	dir, err := os.Stat(dstdir)
+	if dir == nil || os.IsNotExist(err) {
+		_ = os.MkdirAll(dstdir, os.ModePerm)
+	}
+
+	dst, _ := os.Create(to)
+	if dst == nil {
+		log.Printf("copy file from %s to %s failed: %v\n", from, to, err)
+		return
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		log.Printf("copy file from %s to %s failed: %v\n", from, to, err)
 	}
 }
 
 func copyNewFiles(app App) {
+	_ = os.RemoveAll(app.WorkPath)
 	log.Println("copy new files from ", app.DebugPath, " to ", app.WorkPath)
 
 	_ = filepath.Walk(app.DebugPath, func(path string, info os.FileInfo, err error) error {
 		relativePath := strings.Replace(filepath.ToSlash(path), filepath.ToSlash(app.DebugPath), "", -1)
 		dest := filepath.Join(app.WorkPath, relativePath)
 		if strings.HasSuffix(path, ".dll") || strings.HasSuffix(path, ".exe") {
-			copyFile(path, filepath.Dir(dest))
+			copyFile(path, dest)
 		}
 		return nil
 	})
+
+	if len(app.VcRedist) > 0 {
+		vc := "vcredist_x64.exe"
+		vcfile, _ := os.Stat(vc)
+		if vcfile != nil {
+			copyFile(vc, app.WorkPath+"/"+vc)
+		} else {
+			app.VcRedist = ""
+			log.Printf("warning: can not find file %s\n", vc)
+		}
+	}
 
 	log.Println("copy new files ok")
 }
@@ -169,15 +183,19 @@ func generateInnoProfile(app App) string {
 		programs = append(programs, text)
 	}
 
-	fileInfo, _ := os.Stat(app.WorkPath + "/config")
-	if fileInfo.IsDir() {
-		flags := "ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall"
-		cfg := fmt.Sprintf(`Source: "{#AppSourceDir}/config/*"; DestDir: "{app}/config/"; Flags: %s`, flags)
-		programs = append(programs, cfg)
-	}
+	//fileInfo, _ := os.Stat(app.WorkPath + "/config")
+	//if fileInfo != nil && fileInfo.IsDir() {
+	//	flags :=
+	//	cfg := fmt.Sprintf(`Source: "{#AppSourceDir}/config/*"; DestDir: "{app}/config/"; Flags: %s`, flags)
+	//	programs = append(programs, cfg)
+	//}
 
 	for _, e := range app.Externs {
-		externs = append(externs, `Source: "`+e.Source+`"; DestDir: "`+e.Target+`"; Flags: ignoreversion`)
+		flags := "ignoreversion recursesubdirs createallsubdirs"
+		if !e.Override {
+			flags += " onlyifdoesntexist uninsneveruninstall"
+		}
+		externs = append(externs, `Source: "`+e.Source+`"; DestDir: "`+e.Target+`"; Flags: `+flags)
 	}
 
 	profile := innoProfileTemplate
@@ -186,6 +204,33 @@ func generateInnoProfile(app App) string {
 	profile = strings.Replace(profile, "$SETUP_TARGET$", app.SetupTarget, -1)
 	profile = strings.Replace(profile, "$PROGRAM_FILES$", strings.Join(programs, "\n"), -1)
 	profile = strings.Replace(profile, "$EXTERN_FILES$", strings.Join(externs, "\n"), -1)
+
+	if len(app.VcRedist) > 0 {
+		run := `Filename: "{app}/vcredist_x64.exe"; Parameters:/q;WorkingDir:{tmp};Flags:skipifdoesntexist;StatusMsg:"Installing Runtime...";Check:NeedInstallVCRuntime`
+		code := `
+var NeedVcRuntime: Boolean;
+ 
+function NeedInstallVCRuntime(): Boolean;
+begin
+  Result := NeedVcRuntime;
+end;
+ 
+function InitializeSetup(): Boolean;
+var version: Cardinal;
+begin
+  if RegQueryDWordValue(HKLM, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$(VCREGKEY)$', 'Version', version) = false then begin
+    NeedVcRuntime := true;
+  end;
+  Result := true;
+end;
+`
+		code = strings.Replace(code, "$VCREGKEY$", app.VcRedist, -1)
+		profile = strings.Replace(profile, "$RUN$", run, -1)
+		profile = strings.Replace(profile, "$CODE$", code, -1)
+	} else {
+		profile = strings.Replace(profile, "$RUN$", "", -1)
+		profile = strings.Replace(profile, "$CODE$", "", -1)
+	}
 
 	iss := filepath.Join(config.Output, app.Name+"_"+config.Version+".iss")
 	log.Println("create iss file: ", iss)
