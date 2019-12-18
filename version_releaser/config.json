@@ -1,5 +1,5 @@
 {
-  "version":"2.12.6",
+  "version":"C:/dev/code/FTS4/Src/Client/FtsClient/Src/Version.h",
   "compiler": "c:/Program Files (x86)/Inno Setup 6/ISCC.exe",
   "output": "C:/dev/code/_release/output",
   "publisher":"AtomDataTech, Inc.",
@@ -9,7 +9,6 @@
       "app_id":"{{44095B79-5853-4782-866F-B9BBAF6DE96E}}",
       "app_name":"AtsClient",
       "app_exe":"AtsClient.exe",
-      "debug_path" : "C:/dev/code/AtsClient/Build/x64/Release",
       "work_path": "C:/dev/code/_release/AtsClient",
       "setup_target_path":"C:/Program Files/Atom/AtsClient",
       "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
@@ -24,7 +23,6 @@
       "app_id":"{{5C19D93C-986C-49DE-8729-A5177E855361}}",
       "app_name":"AtsServer",
       "app_exe":"ats_server.exe",
-      "debug_path" : "C:/dev/code/AtsServer/build/x64/Release",
       "work_path": "C:/dev/code/_release/AtsServer",
       "setup_target_path":"C:/Program Files/Atom/AtsServer",
       "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
