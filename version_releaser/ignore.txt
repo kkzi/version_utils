@@ -1,0 +1,6 @@
+.ilk
+.pdb
+.log
+.exp
+Aded.lib
+*/bin/*.lib
