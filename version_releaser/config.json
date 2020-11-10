@@ -1,35 +1,20 @@
 {
-  "version":"C:/dev/code/FTS4/Src/Client/FtsClient/Src/Version.h",
-  "compiler": "c:/Program Files (x86)/Inno Setup 6/ISCC.exe",
-  "output": "C:/dev/code/_release/output",
-  "publisher":"AtomDataTech, Inc.",
-  "url":"http://www.atomdatatech.com/",
+  "version": "test",
+  "compiler": "./iscc/ISCC.exe",
+  "output": "D:/output",
+  "publisher": "AtomDataTech, Inc.",
+  "url": "http://www.atomdatatech.com/",
   "apps": [
     {
-      "app_id":"{{44095B79-5853-4782-866F-B9BBAF6DE96E}}",
-      "app_name":"AtsClient",
-      "app_exe":"AtsClient.exe",
-      "work_path": "C:/dev/code/_release/AtsClient",
-      "setup_target_path":"C:/Program Files/Atom/AtsClient",
+      "app_id": "{{EB076591-BD89-4593-B539-881AB7DC9F4A}}",
+      "app_name": "Fts",
+      "app_exe": "Fts.exe",
+      "build_path": "C:/Users/kizi/Desktop/Fts_install/Debug",
+      "setup_target_path": "C:/Program Files/Atom/Fts",
       "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
-      "extern_path":[
-          {"source":"C:/dev/code/AtsClient/Config/*","target":"{app}/Config", "override": false},
-          {"source":"C:/dev/code/AtsClient/Customized/*","target":"{app}/Customized", "override": false},
-          {"source":"C:/dev/code/AtsClient/Src/TestUnitExcelDriver/*.py","target":"{app}/TestUnitExcelDriver", "override": false},
-          {"source":"C:/dev/code/AtsClient/Build/x64/Release/AtsForPython.pyd","target":"{app}/", "override": true}
-      ]
-    },
-    {
-      "app_id":"{{5C19D93C-986C-49DE-8729-A5177E855361}}",
-      "app_name":"AtsServer",
-      "app_exe":"ats_server.exe",
-      "work_path": "C:/dev/code/_release/AtsServer",
-      "setup_target_path":"C:/Program Files/Atom/AtsServer",
-      "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
-      "extern_path":[
-          {"source":"C:/dev/code/AtsServer/config/*","target":"{app}/config", "override": false},
-          {"source":"C:/dev/code/AtsServer/sql/*","target":"{app}/sql","override": true}
+      "extern_path": [
       ]
     }
   ]
 }
+
