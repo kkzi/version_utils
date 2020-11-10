@@ -2,5 +2,8 @@
 .pdb
 .log
 .exp
-Aded.lib
-*/bin/*.lib
+.iobj
+.ipdb
+*/bin/license.dat
+*/activity/*.lib
+*/plugins/*/*.lib

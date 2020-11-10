@@ -19,6 +19,7 @@ type Config struct {
 	Publisher string `json:"publisher"`
 	Url       string `json:"url"`
 	Apps      []App  `json:"apps"`
+	Verbose   bool   `json:"verbose_log"`
 }
 
 type App struct {
@@ -216,6 +217,7 @@ func copyFile(from, to string) {
 	if err != nil {
 		log.Fatal().Str("from", from).Str("to", to).Err(err).Msg("")
 	}
+	log.Debug().Str("from", from).Str("to", to).Msg("copied")
 }
 
 func copyNewFiles(app App) {
@@ -339,10 +341,12 @@ func needIgnore(path string) bool {
 	path = filepath.ToSlash(path)
 	for _, i := range ignores {
 		if strings.HasSuffix(path, i) {
+			log.Debug().Str("path", path).Str("rule", i).Msg("ignore")
 			return true
 		}
 		matched, _ := filepath.Match(i, path)
 		if matched {
+			log.Debug().Str("path", path).Str("rule", i).Msg("ignore")
 			return true
 		}
 	}
@@ -350,8 +354,9 @@ func needIgnore(path string) bool {
 }
 
 func main() {
-	fmt.Println("======= version releaser 2.2 build.20201111 =======")
+	fmt.Println("======= version releaser 2.3 build.20201111 =======")
 	var cw = zerolog.ConsoleWriter{Out: os.Stdout}
+	cw.NoColor = true
 	//cw.FormatTimestamp = func(i interface{}) string {
 	//	return fmt.Sprintf("%s", i)
 	//}
@@ -363,6 +368,12 @@ func main() {
 	}
 	loadConfig(cfg)
 	loadIgnore()
+
+	if config.Verbose {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
 
 	var iss []string
 	for _, app := range config.Apps {

@@ -15,6 +15,7 @@
       "extern_path": [
       ]
     }
-  ]
+  ],
+  "verbose_log": false
 }
 
