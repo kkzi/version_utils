@@ -316,6 +316,7 @@ end;
 	}
 
 	iss := filepath.Join(config.Output, app.Name+"_"+config.Version+".iss")
+	iss = filepath.ToSlash(iss)
 	log.Info().Str("path", iss).Msg("create iss file")
 	if err := ioutil.WriteFile(iss, []byte(profile), os.ModePerm); err != nil {
 		log.Fatal().Err(err).Msg("create iss file failed")
@@ -349,12 +350,12 @@ func needIgnore(path string) bool {
 }
 
 func main() {
-	fmt.Println("======= version releaser 2.1 build.20201111 =======")
+	fmt.Println("======= version releaser 2.2 build.20201111 =======")
 	var cw = zerolog.ConsoleWriter{Out: os.Stdout}
 	//cw.FormatTimestamp = func(i interface{}) string {
 	//	return fmt.Sprintf("%s", i)
 	//}
-	log = zerolog.New(cw).With().Timestamp().Caller().Logger()
+	log = zerolog.New(cw).With().Timestamp().Logger()
 
 	cfg := "config.json"
 	if len(os.Args) > 1 {
