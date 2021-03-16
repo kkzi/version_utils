@@ -1,7 +1,6 @@
 {
   "version": "test",
   "compiler": "./iscc/ISCC.exe",
-  "output": "D:/output",
   "publisher": "AtomDataTech, Inc.",
   "url": "http://www.atomdatatech.com/",
   "apps": [
@@ -10,12 +9,12 @@
       "app_name": "Fts",
       "app_exe": "Fts.exe",
       "build_path": "C:/Users/kizi/Desktop/Fts_install/Debug",
-      "setup_target_path": "C:/Program Files/Atom/Fts",
       "vcredist": "{12578975-C765-4BDF-8DDC-3284BC0E855F}",
-      "extern_path": [
-      ]
+      "setup_icon": "install.ico",
+      "registry_ext": ".dpc",
+      "registry_ext_name": "DataProcessConfigFile",
+      "registry_ext_icon_idx": 1
     }
-  ],
-  "verbose_log": false
+  ]
 }
 
