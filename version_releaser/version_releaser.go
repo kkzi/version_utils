@@ -120,6 +120,7 @@ Type: filesandordirs; Name: "{app}\bin\logs";
 var workspace string
 var configFilePath string
 var ignoreFilePath string
+var notifyCmd string
 var config = Config{}
 
 func loadConfig() {
@@ -482,12 +483,23 @@ func generateSetupFile(iss string) {
 		log.Fatal(err)
 	}
 	log.Printf("create setup file ok\n")
+
+	if len(notifyCmd) > 0 {
+		args := strings.Split(notifyCmd, " ")
+		args = append([]string{"/C"}, args...)
+		cmd := exec.Command("cmd", args...)
+		err := cmd.Run()
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func init() {
 	fmt.Println("======= version releaser 2.7 build.20210416 =======")
 	flag.StringVar(&workspace, "w", "./workspace", "workspace path")
 	flag.StringVar(&configFilePath, "c", "./config.json", "config file path")
+	flag.StringVar(&notifyCmd, "n", "", "notify cmd")
 }
 
 func main() {
