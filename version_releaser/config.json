@@ -1,6 +1,5 @@
 {
   "version": "test",
-  "compiler": "./iscc/ISCC.exe",
   "publisher": "AtomDataTech, Inc.",
   "url": "http://www.atomdatatech.com/",
   "apps": [

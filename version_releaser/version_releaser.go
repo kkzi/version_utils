@@ -15,6 +15,12 @@ import (
 	"strings"
 )
 
+import "embed"
+
+//go:embed iscc
+var iscc embed.FS
+var isccPath string
+
 type Config struct {
 	Version   string `json:"version"`
 	Compiler  string `json:"compiler"`
@@ -24,20 +30,20 @@ type Config struct {
 }
 
 type App struct {
-	Id                 string       `json:"app_id"`
-	Name               string       `json:"app_name"`
-	ExeName            string       `json:"app_exe"`
-	BuildPath          string       `json:"build_path"`
-	VcRedist           string       `json:"vcredist"`
-	Externs            []ExternPath `json:"extern_path"`
-	SetupIcon          string       `json:"setup_icon"`
-	RegisterExt        string       `json:"registry_ext"`
-	RegisterExtName    string       `json:"registry_ext_name"`
-	RegisterExtIconIdx int          `json:"registry_ext_icon_idx"`
+	Id                 string         `json:"app_id"`
+	Name               string         `json:"app_name"`
+	ExeName            string         `json:"app_exe"`
+	BuildPath          string         `json:"build_path"`
+	VcRedist           string         `json:"vcredist"`
+	Externals          []ExternalPath `json:"external_path"`
+	SetupIcon          string         `json:"setup_icon"`
+	RegisterExt        string         `json:"registry_ext"`
+	RegisterExtName    string         `json:"registry_ext_name"`
+	RegisterExtIconIdx int            `json:"registry_ext_icon_idx"`
 	WorkPath           string
 }
 
-type ExternPath struct {
+type ExternalPath struct {
 	Source   string `json:"source"`
 	Target   string `json:"target"`
 	Override bool   `json:"override"`
@@ -142,13 +148,13 @@ func loadConfig() {
 		//	log.Printf("invalid setup_target_path setup path=%s\n", app.SetupTarget)
 		//}
 
-		for i, ext := range app.Externs {
+		for i, ext := range app.Externals {
 			if !filepath.IsAbs(ext.Source) {
 				path, err := filepath.Abs(ext.Source)
 				if err != nil {
 					log.Fatal(err)
 				}
-				config.Apps[idx].Externs[i].Source = filepath.ToSlash(path)
+				config.Apps[idx].Externals[i].Source = filepath.ToSlash(path)
 			}
 		}
 
@@ -168,6 +174,7 @@ func loadConfig() {
 			}
 		}
 	}
+
 	log.Printf("load config ok. path=%s\n", configPath)
 }
 
@@ -198,6 +205,19 @@ func loadIgnore() {
 		ignores = ignores[:len(ignores)-1]
 		ignores = strings.Replace(ignores, "*", "([^|><?*\":\\/]*\\\\)*([^|><?*\":\\/]*)?", -1)
 		ignores = strings.Replace(ignores, ".", "\\.", -1)
+	}
+}
+
+func extractEmbedFiles(src, dst string) {
+	entries, _ := iscc.ReadDir(src)
+	for _, entry := range entries {
+		srcPath := src + "/" + entry.Name()
+		dstPath := dst + "/" + entry.Name()
+		if entry.IsDir() {
+			extractEmbedFiles(srcPath, dstPath)
+		} else {
+			copyFile(srcPath, dstPath)
+		}
 	}
 }
 
@@ -268,6 +288,7 @@ func copyFile(from, to string) {
 	defer dst.Close()
 
 	_, err = io.Copy(dst, src)
+	log.Printf("copy from %s, to %s\n", src, dst)
 	if err != nil {
 		log.Printf("copy failed, %s. from=%s, to=%s\n", err, from, to)
 	}
@@ -339,7 +360,7 @@ func generateProgramsBlock(app App) string {
 
 func generateExternBlock(app App) string {
 	var externs []string
-	for _, e := range app.Externs {
+	for _, e := range app.Externals {
 		flags := "ignoreversion recursesubdirs createallsubdirs"
 		if !e.Override {
 			flags += " onlyifdoesntexist uninsneveruninstall"
@@ -451,7 +472,8 @@ func init() {
 }
 
 func main() {
-	fmt.Println("======= version releaser 2.6 build.20210316 =======")
+	log.SetFlags(log.Lmicroseconds)
+	fmt.Println("======= version releaser 2.7 build.20210416 =======")
 	flag.Parse()
 
 	if !filepath.IsAbs(workspace) {
@@ -459,9 +481,16 @@ func main() {
 	}
 	workspace = filepath.ToSlash(workspace)
 
-	fmt.Printf("workspace=%s, config paht=%s\n", workspace, configPath)
+	log.Printf("workspace=%s, config paht=%s\n", workspace, configPath)
 	loadConfig()
 	loadIgnore()
+
+	if len(config.Compiler) == 0 {
+		isccPath, _ = ioutil.TempDir("", "iscc")
+		config.Compiler = isccPath + "\\iscc.exe"
+		log.Printf("use iscc path %s\n", isccPath)
+		extractEmbedFiles("iscc", isccPath)
+	}
 
 	var iss []string
 	for _, app := range config.Apps {
